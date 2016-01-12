@@ -1,0 +1,273 @@
+package world;
+
+import java.util.*;
+
+
+class Farm
+{
+	FarmObject[][] grid;
+	FarmObject[] objects;
+}
+
+class World
+{
+	int time;
+	Farm[] farms;
+
+	public int timeInc()
+	{
+		this.time++;
+		if(this.time>=24)
+		{
+			this.time=0;
+		}
+		return this.time;
+	}
+}
+
+abstract class FarmObject
+{
+	int x;
+	int y;
+	
+	abstract void doStuffForAnHour(World w, Farm f);
+	void removeObject(Farm f)
+	{
+		f.grid[this.x][this.y] = null;
+		int i;
+		FarmObject[] f1;
+		f1 = new FarmObject[f.objects.length-1];
+
+		for(i = 0; i < f.objects.length; i++)
+		{
+			if(f.objects[i]==this)
+			{
+				f.objects[i]=null;
+				break;
+			}
+			f1[i] = f.objects[i];
+		}
+		for(int j = i; j<f.objects.length -1; j++)
+		{
+			f1[j]= f.objects[j+1];
+		}
+		f.objects = f1;
+	}
+	
+	int getRandCoordinate(int d)
+	{
+		Random rand =new Random();
+		
+      return(rand.nextInt(d*2) - d);
+	}
+	
+	void  eatGrass(FarmObject f)
+	{
+		// do nothing here, let it be overridden
+	}
+}
+
+class Cow extends FarmObject
+{
+	String name;
+	int hunger;
+	int age;
+	int sickLvl;
+	int maxDistance = 1;
+	
+	void incHunger()
+	{
+		this.hunger = this.hunger + 2;
+	}
+	
+	void incAge()
+	{
+		this.age++;
+	}
+	
+	boolean nextSquareIsAvailable(Farm f, int x, int y)
+	{
+		if (x < 0 || x > (f.grid.length -1) || y < 0 || y > (f.grid[0].length -1))	
+			return false;
+			
+		if (f.grid[x][y] instanceof Grass)
+			return true;
+			
+		return false;
+	
+	}
+	
+	void moveCow( int x, int y)
+	{
+		this.x = x;
+		this.y = y;	
+	}
+	
+	boolean sleepTime(World w)
+	{
+		if(w.time <= 6 || w.time >= 18)
+			return true;
+		else
+			return false;
+	}
+		
+	void doStuffForAnHour(World w, Farm f)
+	{
+		int x;
+		int y;
+
+		this.incHunger();
+		this.incAge();	
+		if (this.age >= 90001 || this.hunger >= 100)
+		{
+			this.removeObject(f);	
+		}	
+		double deathProbability = (0.0001*this.age*this.sickLvl)/100;
+		Random rand = new Random();
+		if (deathProbability > rand.nextDouble())
+		{
+			this.removeObject(f)	;
+		}
+				
+		if (this.sleepTime(w))
+			return;   // have to do nothing, just enjoy
+		
+      x = this.getRandCoordinate(this.maxDistance);
+      y = this.getRandCoordinate(this.maxDistance);
+		if (nextSquareIsAvailable(f, this.x + x, this.y + y ))
+		{
+			moveCow(this.x +x, this.y + y);    // Move to next random square 
+			f.grid[this.x][this.y].eatGrass(this);
+			
+		}
+		else
+		{
+            // Print do nothing and enjoy :-)	
+		}		
+		
+	}	
+	
+}
+class NocturnalCow extends Cow
+{
+	
+	boolean sleepTime(World w)
+	{
+		if(w.time >= 6 && w.time <= 18)
+			return true;
+		else
+			return false;
+	}
+
+}
+class FlyingCow extends Cow
+{
+	
+	void setMaxFlyDistance(int d)
+	{
+		this.maxDistance = d;
+	}
+	
+	void doStuffForAnHour(World w, Farm f)
+	{
+		int x;
+		int y;
+
+		this.incHunger();
+		this.incAge();	
+		if (this.age >= 90001 || this.hunger >= 100)
+		{
+			this.removeObject(f);		
+		}	
+		double deathProbability = (0.0001*this.age*this.sickLvl)/100;
+		Random rand = new Random();
+		if (deathProbability > rand.nextDouble())
+		{
+			this.removeObject(f)	;
+		}
+				
+		if (this.sleepTime(w))
+			return;   // have to do nothing, just enjoy
+		while (true)
+		{
+      		x = this.getRandCoordinate(this.maxDistance);
+      		y = this.getRandCoordinate(this.maxDistance);
+			if (nextSquareIsAvailable(f, this.x + x, this.y + y ))
+			{
+				moveCow(this.x +x, this.y + y);    // Move to next random square 
+				f.grid[this.x][this.y].eatGrass(this);
+				break;	
+			}
+		}
+		
+	}	
+
+}
+class Grass extends FarmObject
+{
+	int grass=1;
+	
+	
+	void incGrass()
+	{
+		this.grass++;
+	}
+
+	void doStuffForAnHour(World w, Farm f)
+	{
+		this.incGrass();
+		
+		 int  x = this.getRandCoordinate(1);
+   		 int y = this.getRandCoordinate(1);
+      
+     	  if (adjcentGrassPossible(f, this.x + x, this.y + y))
+     	  {
+				double grassProbability = (0.1 * this.grass)/100;
+				Random rand = new Random();
+				 if ( grassProbability > rand.nextDouble())
+				 {
+						createGrassPatch(f, this.x + x, this.y + y);		 
+				 } 
+     	  }
+			
+	}
+
+	void createGrassPatch(Farm f, int x, int y)
+	{
+		f.grid[x][y] = new Grass();
+	}	
+	
+	boolean adjcentGrassPossible(Farm f, int x, int y)
+	{
+		if (x < 0 || x > (f.grid.length -1) || y < 0 || y > (f.grid[0].length -1))	
+			return false;
+			
+		if ((f.grid[x][y] instanceof Grass) || (f.grid[x][y] instanceof Cow))
+			return false;
+			
+		return true;
+	}
+	
+	void  eatGrass(Cow c, Farm f)
+	{
+		c.hunger = c.hunger - this.grass;
+		this.removeObject(f);	
+	}
+}
+
+
+class PoisonedGrass extends Grass
+{
+	void incGrass()
+	{
+		this.grass = this.grass + 2;
+	}
+
+	void eatGrass(Cow c, Farm f)
+	{
+		c.hunger = c.hunger - this.grass;
+		c.sickLvl = c.sickLvl + this.grass;
+		this.removeObject(f);	
+	}
+
+}
